@@ -61,20 +61,22 @@ weights = np.random.rand(X_train.shape[1], 1)
 bias = np.random.rand(1)
 lr = 0.05
 
+cost = []
+epoca = []
 for i, epoch in enumerate(range(20000)):
     inputs = X_train
 
     # feedforward step1
     XW = np.dot(X_train, weights) + bias
-    
+
     #feedforward step2
-    z = sigmoid(XW)
+    #z = sigmoid(XW)
 
     # backpropagation step 1
     error = z - Y_train
-    if(i in [100, 200, 300, 400, 500, 600, 700, 1000, 1500, 5000, 10000, 19999]):
-        print(0.5*(error.sum()*error.sum()))
-    
+    if(i % 100 == 0):
+        cost.append(int((0.5*(error.sum()*error.sum()))))
+        epoca.append(i)
     # backpropagation step 2
     dcost_dpred = error
     dpred_dz = sigmoid_der(z)
@@ -97,3 +99,6 @@ for i, image in enumerate(X_test):
         
 print("Corretti: " + str(corretti))
 print("Accuracy: " + str(corretti/len(Y_test)))
+
+plt.plot(epoca, cost)
+plt.show()
