@@ -51,9 +51,21 @@ def sigmoid(x):
 def sigmoid_der(x):
     return sigmoid(x)*(1-sigmoid(x))
 
-X_norm = normalize(X)
-Y_norm = normalize(Y)
+def calculate_accuracy(X_test, weights, bias, epoca):
+    corretti = 0
+    for i, image in enumerate(X_test):
+        result = sigmoid(np.dot(image, weights) + bias)
+        if (float(result) > 0.5 and int(Y_test[i]) == 1):
+            corretti += 1
+        elif (float(result) < 0.5 and int(Y_test[i]) == 0):
+            corretti += 1
 
+    print("Epoca: " + str(epoca))
+    print("Corretti: " + str(corretti))
+    print("Accuracy: " + str(corretti/len(Y_test)))
+
+X_norm = normalize(X)
+Y_norm = Y
 X_train, Y_train, X_validation, Y_validation, X_test, Y_test = randomSetsCreation(X_norm, Y_norm)
 
 np.random.seed(42)
@@ -63,20 +75,21 @@ lr = 0.05
 
 cost = []
 epoca = []
-for i, epoch in enumerate(range(20000)):
+for i, epoch in enumerate(range(101)):
     inputs = X_train
 
     # feedforward step1
     XW = np.dot(X_train, weights) + bias
 
     #feedforward step2
-    #z = sigmoid(XW)
+    z = sigmoid(XW)
 
     # backpropagation step 1
     error = z - Y_train
-    if(i % 100 == 0):
-        cost.append(int((0.5*(error.sum()*error.sum()))))
+    if(i % 1 == 0):
+        cost.append(int((0.5*(error.sum()*error.sum()))/X_train.shape[0]))
         epoca.append(i)
+        #calculate_accuracy(X_test, weights, bias, epoca)
     # backpropagation step 2
     dcost_dpred = error
     dpred_dz = sigmoid_der(z)
@@ -89,16 +102,8 @@ for i, epoch in enumerate(range(20000)):
     for num in z_delta:
         bias -= lr * num
 
-corretti = 0
-for i, image in enumerate(X_test):
-    result = sigmoid(np.dot(image, weights) + bias)
-    if (float(result) > 0.5 and int(Y_test[i]) == 1):
-        corretti += 1 
-    elif (float(result) < 0.5 and int(Y_test[i]) == 0):
-        corretti += 1
-        
-print("Corretti: " + str(corretti))
-print("Accuracy: " + str(corretti/len(Y_test)))
+
+
 
 plt.plot(epoca, cost)
 plt.show()
