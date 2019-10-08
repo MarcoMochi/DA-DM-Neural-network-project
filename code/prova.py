@@ -1,5 +1,6 @@
 import numpy  as np
 import matplotlib.pyplot as plt
+from scipy.special import expit
 import cv2
 
 X = np.load("../dataset/X.npy")
@@ -21,7 +22,7 @@ def normalize(image):
 def randomSetsCreation(X_norm, Y_norm):
     
     indices = np.random.permutation(X_norm.shape[0])
-    train_idx = indices[:int(len(indices) * 0.6)]
+    train_idx = indices[:int(len(indices) * 0.8)]
     validation_idx = indices[len(train_idx):int(len(indices) * 0.8)]
     test_idx = indices[len(validation_idx) + len(train_idx):]
 
@@ -45,7 +46,7 @@ def randomSetsCreation(X_norm, Y_norm):
 
 # Sigmoid function
 def sigmoid(x):
-    return 1/(1+np.exp(-x))
+    return expit(x)
 
 # Method for calculating the derivative of Sigmoid function
 def sigmoid_der(x):
@@ -60,7 +61,7 @@ def calculate_accuracy(X_test, weights, bias, epoca):
         elif (float(result) < 0.5 and int(Y_test[i]) == 0):
             corretti += 1
 
-    print("Epoca: " + str(epoca))
+    print("Epoca: " + str(epoca[-1]))
     print("Corretti: " + str(corretti))
     print("Accuracy: " + str(corretti/len(Y_test)))
 
@@ -75,7 +76,7 @@ lr = 0.05
 
 cost = []
 epoca = []
-for i, epoch in enumerate(range(101)):
+for i, epoch in enumerate(range(30000)):
     inputs = X_train
 
     # feedforward step1
@@ -86,10 +87,10 @@ for i, epoch in enumerate(range(101)):
 
     # backpropagation step 1
     error = z - Y_train
-    if(i % 1 == 0):
+    if(i % 100 == 0):
         cost.append(int((0.5*(error.sum()*error.sum()))/X_train.shape[0]))
         epoca.append(i)
-        #calculate_accuracy(X_test, weights, bias, epoca)
+        calculate_accuracy(X_test, weights, bias, epoca)
     # backpropagation step 2
     dcost_dpred = error
     dpred_dz = sigmoid_der(z)
