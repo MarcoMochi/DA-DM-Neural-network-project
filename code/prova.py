@@ -52,69 +52,89 @@ def sigmoid(x):
 def sigmoid_der(x):
     return sigmoid(x)*(1-sigmoid(x))
 
-def calculate_accuracy(X_test, weights, bias, epoca):
+# Leaky ReLU:
+def leaky(x):
+  return x*0.01 if x < 0 else x
+
+# Leaky ReLU derivative:
+def leaky_deriv(x):
+  return 0.01 if x < 0 else 1
+
+def calculate_accuracy(xdentro, ydentro, weights, bias, epoca):
     corretti = 0
-    for i, image in enumerate(X_test):
+    for i, image in enumerate(xdentro):
         result = sigmoid(np.dot(image, weights) + bias)
-        if (float(result) > 0.5 and int(y[i]) == 1):
+        if (float(result) > 0.5 and int(ydentro[i]) == 1):
             corretti += 1
-        elif (float(result) < 0.5 and int(y[i]) == 0):
+        elif (float(result) < 0.5 and int(ydentro[i]) == 0):
             corretti += 1
 
     print("Epoca: " + str(epoca[-1]))
     print("Corretti: " + str(corretti))
-    print("Accuracy: " + str(corretti/len(y)))
-    return float(corretti/len(y))
+    print("Accuracy: " + str(corretti/len(ydentro)))
+    return float(corretti/len(ydentro))
 
 x = []
 
 with open("../dataset/sonar_x.txt") as f:
-    for line in f.read():
-        for value in line.split():
-            x.append(value)
-print(x)
-y = []
-
-with open("../dataset/sonar_y.txt") as g:
-    for line in g.read():
-
-        if(float(value) == -1):
-            y.append(0)
-        else:
-            y.append(value)
-            
-x = np.array(x)
+    t = f.read()
+x = list(t.split())
+x = np.array(x, float)
 x = x.reshape(208, 60)
+x_train = np.array(x)
+with open("../dataset/sonar_y.txt") as g:
+    t = g.read()
 
+y = list(t.split())
+for i, value in enumerate(y):
+    if float(value) < 0:
+        y[i] = 0
+    else:
+        y[i] = 1
 y = np.array(y)
-y = y.reshape(208, 1)
-            
+y = y.reshape(y.shape[0], 1)
+
+
 X_norm = normalize(X)
 Y_norm = Y
 X_train, Y_train, X_validation, Y_validation, X_test, Y_test = randomSetsCreation(X_norm, Y_norm)
 
+
 np.random.seed(42)
-weights = np.random.randn(x.shape[1], 1)*np.sqrt(2/x.shape[1])
+weights = np.random.randn(x_train.shape[1], 1)*np.sqrt(2/x_train.shape[1])
 bias = np.random.rand(1)
 lr = 0.05
+block = x_train.shape[0]
+x_test = x_train[180:]
+y_test = y[180:]
+x_train = x_train[:180]
+y = y[:180]
+
+
+
+
 
 cost = []
+test = []
 epoca = []
-for i, epoch in enumerate(range(10000)):
-    inputs = x
+for i, epoch in enumerate(range(20000)):
+    inputs = x_train
 
     # feedforward step1
-    XW = np.dot(x, weights) + bias
+    xw = np.dot(x_train, weights) + bias
 
     #feedforward step2
-    z = sigmoid(XW)
+    z = sigmoid(xw)
+
 
     # backpropagation step 1
     error = z - y
-    if(i % 100 == 0):
+    if(i % 1000 == 0):
         epoca.append(i)
-        xt = calculate_accuracy(x, weights, bias, epoca)
+        xt = calculate_accuracy(x_train, y, weights, bias, epoca)
+        xy = calculate_accuracy(x_test, y_test, weights, bias, epoca)
         cost.append(xt)
+        test.append(xy)
         
         
     # backpropagation step 2
@@ -123,14 +143,12 @@ for i, epoch in enumerate(range(10000)):
 
     z_delta = dcost_dpred * dpred_dz
 
-    inputs = x.T
+    inputs = x_train.T
     weights -= lr * np.dot(inputs, z_delta)
 
     for num in z_delta:
         bias -= lr * num
 
-
-
-
 plt.plot(epoca, cost)
+plt.plot(epoca, test)
 plt.show()
