@@ -56,42 +56,65 @@ def calculate_accuracy(X_test, weights, bias, epoca):
     corretti = 0
     for i, image in enumerate(X_test):
         result = sigmoid(np.dot(image, weights) + bias)
-        if (float(result) > 0.5 and int(Y_train[i]) == 1):
+        if (float(result) > 0.5 and int(y[i]) == 1):
             corretti += 1
-        elif (float(result) < 0.5 and int(Y_train[i]) == 0):
+        elif (float(result) < 0.5 and int(y[i]) == 0):
             corretti += 1
 
     print("Epoca: " + str(epoca[-1]))
     print("Corretti: " + str(corretti))
-    print("Accuracy: " + str(corretti/len(Y_train)))
-    return float(corretti/len(Y_train))
+    print("Accuracy: " + str(corretti/len(y)))
+    return float(corretti/len(y))
 
+x = []
+
+with open("../dataset/sonar_x.txt") as f:
+    for line in f.read():
+        for value in line.split():
+            x.append(value)
+print(x)
+y = []
+
+with open("../dataset/sonar_y.txt") as g:
+    for line in g.read():
+
+        if(float(value) == -1):
+            y.append(0)
+        else:
+            y.append(value)
+            
+x = np.array(x)
+x = x.reshape(208, 60)
+
+y = np.array(y)
+y = y.reshape(208, 1)
+            
 X_norm = normalize(X)
 Y_norm = Y
 X_train, Y_train, X_validation, Y_validation, X_test, Y_test = randomSetsCreation(X_norm, Y_norm)
 
 np.random.seed(42)
-weights = np.random.randn(X_train.shape[1], 1)*np.sqrt(2/X_train.shape[1])
+weights = np.random.randn(x.shape[1], 1)*np.sqrt(2/x.shape[1])
 bias = np.random.rand(1)
 lr = 0.05
 
 cost = []
 epoca = []
 for i, epoch in enumerate(range(10000)):
-    inputs = X_train
+    inputs = x
 
     # feedforward step1
-    XW = np.dot(X_train, weights) + bias
+    XW = np.dot(x, weights) + bias
 
     #feedforward step2
     z = sigmoid(XW)
 
     # backpropagation step 1
-    error = z - Y_train
+    error = z - y
     if(i % 100 == 0):
         epoca.append(i)
-        x = calculate_accuracy(X_train, weights, bias, epoca)
-        cost.append(x)
+        xt = calculate_accuracy(x, weights, bias, epoca)
+        cost.append(xt)
         
         
     # backpropagation step 2
@@ -100,7 +123,7 @@ for i, epoch in enumerate(range(10000)):
 
     z_delta = dcost_dpred * dpred_dz
 
-    inputs = X_train.T
+    inputs = x.T
     weights -= lr * np.dot(inputs, z_delta)
 
     for num in z_delta:
