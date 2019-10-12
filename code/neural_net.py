@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Oct 11 10:49:21 2019
+Created on Wed Oct  9 16:21:55 2019
 
 @author: Andre
 """
 
-import numpy  as np
+from sklearn import datasets
+import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import expit
-import cv2
-import os
+#np.random.seed(0)
+#feature_set, labels = datasets.make_moons(100, noise=0.10)
+
+#labels = labels.reshape(100, 1)
+
+#x = np.load("../dataset/malaria_input.npy")
+#y = np.load("../dataset/malaria_output.npy")
 
 x = list() #create x data
 y = list() # create y data
@@ -29,16 +35,26 @@ for i in os.listdir("../dataset/Uninfected"):
         x.append(img)
         y.append(0)
         
-x = np.array(x) 
+grey = []        
+for i in range(len(x[:10])): 
+    for k in range(40):
+        for j in range(40):
+            tot = x[i][k][j][0] * 0.3 + x[i][k][j][1] * 0.59 + x[i][k][j][2] * 0.11
+            grey.append(tot)
+        
+x = np.array(grey) 
 y = np.array(y)
 #reshapeing data
-x = x.reshape(x.shape[0],x.shape[1]*x.shape[2]*x.shape[3])
+x = x.reshape(10,1600)
 y = y.reshape(y.shape[0], 1)
 x = x**8
+np.save("../dataset/malaria_input_grey", x)
+np.save("../dataset/malaria_output_grey", y)
 
-# i used sklearn modul for splitting process
-from sklearn.model_selection import train_test_split
-x_train,x_test,y_train,y_test = train_test_split(x,y,test_size = 0.2,random_state = 42)
+
+x_train,x_test,y_train,y_test = train_test_split(x,y,test_size = 0.2,random_state = 50)
+
+
 
 # Plotting dataset images function
 def plotDataset():
@@ -78,21 +94,11 @@ def randomSetsCreation(X_norm, Y_norm):
     
     return X_train, Y_train, X_validation, Y_validation, X_test, Y_test
 
-# Sigmoid function
 def sigmoid(x):
     return expit(x)
 
-# Method for calculating the derivative of Sigmoid function
 def sigmoid_der(x):
-    return sigmoid(x)*(1-sigmoid(x))
-
-# Leaky ReLU:
-def leaky(x):
-  return x*0.01 if x < 0 else x
-
-# Leaky ReLU derivative:
-def leaky_deriv(x):
-  return 0.01 if x < 0 else 1
+    return sigmoid(x) *(1-sigmoid (x))
 
 def calculate_accuracy(xdentro, ydentro, weights, bias, epoca):
     corretti = 0
@@ -109,59 +115,62 @@ def calculate_accuracy(xdentro, ydentro, weights, bias, epoca):
     return float(corretti/len(ydentro))
 
 
+wh = np.random.rand(len(x_train[0]), 4)  
+wo = np.random.rand(4, 1) 
+lr = 25
 
-np.random.seed(42)
-weights = np.random.randn(x_train.shape[1], 1)*np.sqrt(2/x_train.shape[1])
-bias = np.random.rand(1)
-lr = 0.05
-#block = x_train.shape[0]
-#x_test = x_test[180:]
-#y_test = y_test[180:]
-#x_train = x_train[:180]
-#y_train = y_train[:180]
-
-
-
-
+x_test = x_test[:5000]
+y_test = y_test[:5000]
+x_train = x_train[:5000]
+y_train = y_train[:5000]
 
 cost = []
-test = []
 epoca = []
-print("Inizio:")
-for i, epoch in enumerate(range(10000)):
-    inputs = x_train
 
-    # feedforward step1
-    xw = np.dot(x_train, weights) + bias
+for i, epoch in enumerate(range(1000)):
+    # feedforward
+    zh = np.dot(x_train, wh)
+    ah = sigmoid(zh)
 
-    #feedforward step2
-    z = sigmoid(xw)
+    zo = np.dot(ah, wo)
+    ao = sigmoid(zo)
 
+    # Phase1 =======================
 
-    # backpropagation step 1
-    error = z - y_train
-    if(i % 100 == 0):
+    error_out = ((1 / 2) * (np.power((ao - y_train), 2)))
+    print(error_out.sum())       
+    if (i % 100 == 0):
+        corretti = 0
         epoca.append(i)
-        xt = calculate_accuracy(x_train, y_train, weights, bias, epoca)
-        xy = calculate_accuracy(x_test, y_test, weights, bias, epoca)
-        cost.append(xt)
-        test.append(xy)
-        
-        
-    # backpropagation step 2
-    dcost_dpred = error
+        for j, image in enumerate(ao):
+            if image > 0.5 and y_train[j] == 1:
+                corretti += 1
+            elif image < 0.5 and y_train[j] == 0:
+                corretti += 1
+        cost.append(corretti/len(y_train))
+        print(corretti/len(y_train))      
 
-    dpred_dz = sigmoid_der(z)
+    dcost_dao = ao - y_train
+    dao_dzo = sigmoid_der(zo) 
+    dzo_dwo = ah
 
+    dcost_wo = np.dot(dzo_dwo.T, dcost_dao * dao_dzo)
 
-    z_delta = dcost_dpred * dpred_dz
+    # Phase 2 =======================
 
-    inputs = x_train.T
-    weights -= lr * np.dot(inputs, z_delta)
+    # dcost_w1 = dcost_dah * dah_dzh * dzh_dw1
+    # dcost_dah = dcost_dzo * dzo_dah
+    dcost_dzo = dcost_dao * dao_dzo
+    dzo_dah = wo
+    dcost_dah = np.dot(dcost_dzo , dzo_dah.T)
+    dah_dzh = sigmoid_der(zh) 
+    dzh_dwh = x_train
+    dcost_wh = np.dot(dzh_dwh.T, dah_dzh * dcost_dah)
 
-    for num in z_delta:
-        bias -= lr * num
+    # Update Weights ================
 
+    wh -= lr * dcost_wh
+    wo -= lr * dcost_wo
+    
 plt.plot(epoca, cost)
-plt.plot(epoca, test)
 plt.show()

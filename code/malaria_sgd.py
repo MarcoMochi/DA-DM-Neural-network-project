@@ -1,44 +1,52 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Oct 11 10:49:21 2019
+Created on Sat Oct 12 15:21:59 2019
 
 @author: Andre
 """
+
 
 import numpy  as np
 import matplotlib.pyplot as plt
 from scipy.special import expit
 import cv2
 import os
+from sklearn.model_selection import train_test_split
 
-x = list() #create x data
-y = list() # create y data
-for i in os.listdir("../dataset/Parasitized"): #read all parasitized data 
-    if ".png" in i: #this if block for only read .png files
-        path = "../dataset/Parasitized/"+i # create path
-        img = plt.imread(path) # and read created path
-        img = cv2.resize(img,(40,40)) # resize image for lower processing power
-        x.append(img) # append image to x data
-        y.append(1) 
-for i in os.listdir("../dataset/Uninfected"):
-    if ".png" in i:
-        path = "../dataset/Uninfected/"+i
-        img = plt.imread(path)
-        img = cv2.resize(img,(40,40))
-        x.append(img)
-        y.append(0)
-        
-x = np.array(x) 
-y = np.array(y)
-#reshapeing data
-x = x.reshape(x.shape[0],x.shape[1]*x.shape[2]*x.shape[3])
-y = y.reshape(y.shape[0], 1)
-x = x**8
+#x = list() #create x data
+#y = list() # create y data
+#for i in os.listdir("../dataset/Parasitized"): #read all parasitized data 
+#    if ".png" in i: #this if block for only read .png files
+#        path = "../dataset/Parasitized/"+i # create path
+#        img = plt.imread(path) # and read created path
+#        img = cv2.resize(img,(40,40)) # resize image for lower processing power
+#        x.append(img) # append image to x data
+#        y.append(1) 
+#for i in os.listdir("../dataset/Uninfected"):
+#    if ".png" in i:
+#        path = "../dataset/Uninfected/"+i
+#        img = plt.imread(path)
+#        img = cv2.resize(img,(40,40))
+#        x.append(img)
+#        y.append(0)
+#        
+#x = np.array(x) 
+#y = np.array(y)
+##reshapeing data
+#x = x.reshape(x.shape[0],x.shape[1]*x.shape[2]*x.shape[3])
+#y = y.reshape(y.shape[0], 1)
+#x = x**8
+#np.save("../dataset/malaria_input", x)
+#np.save("../dataset/malaria_output", y)
 
 # i used sklearn modul for splitting process
-from sklearn.model_selection import train_test_split
-x_train,x_test,y_train,y_test = train_test_split(x,y,test_size = 0.2,random_state = 42)
+
+x = np.load("../dataset/malaria_input.npy")
+y = np.load("../dataset/malaria_output.npy")
+
+
+x_train,x_test,y_train,y_test = train_test_split(x,y,test_size = 0.2,random_state = 50)
 
 # Plotting dataset images function
 def plotDataset():
@@ -109,16 +117,17 @@ def calculate_accuracy(xdentro, ydentro, weights, bias, epoca):
     return float(corretti/len(ydentro))
 
 
-
 np.random.seed(42)
 weights = np.random.randn(x_train.shape[1], 1)*np.sqrt(2/x_train.shape[1])
 bias = np.random.rand(1)
 lr = 0.05
+mini_batch = 10
+length = int(len(x_train[:5000])/mini_batch)
 #block = x_train.shape[0]
-#x_test = x_test[180:]
-#y_test = y_test[180:]
-#x_train = x_train[:180]
-#y_train = y_train[:180]
+x_test = x_test[:5000]
+y_test = y_test[:5000]
+x_train = x_train[:5000]
+y_train = y_train[:5000]
 
 
 
@@ -128,39 +137,47 @@ cost = []
 test = []
 epoca = []
 print("Inizio:")
-for i, epoch in enumerate(range(10000)):
-    inputs = x_train
+for i, epoch in enumerate(range(1000)):
+    
+    #x_train = np.random.shuffle(x_train)
+    indices = np.random.permutation(x_train.shape[0])
 
-    # feedforward step1
-    xw = np.dot(x_train, weights) + bias
-
-    #feedforward step2
-    z = sigmoid(xw)
-
-
-    # backpropagation step 1
-    error = z - y_train
-    if(i % 100 == 0):
-        epoca.append(i)
-        xt = calculate_accuracy(x_train, y_train, weights, bias, epoca)
-        xy = calculate_accuracy(x_test, y_test, weights, bias, epoca)
-        cost.append(xt)
-        test.append(xy)
+    
+    for k in range(mini_batch):
         
-        
-    # backpropagation step 2
-    dcost_dpred = error
+        inputs = x_train[indices[int(k * length):int((k + 1) * length)]]
+        # feedforward step1
+        xw = np.dot(inputs, weights) + bias
+    
+        #feedforward step2
+        z = sigmoid(xw)
+    
+    
+        # backpropagation step 1
+        error = z - y_train[indices[int(k * length):int((k + 1) * length)]]
+        if(i % 100 == 0):
+            epoca.append(i)
+            xt = calculate_accuracy(x_train[indices[int(k * length):int((k + 1) * length)]], y_train[indices[int(k * length):int((k + 1) * length)]], weights, bias, epoca)
+            xy = calculate_accuracy(x_test, y_test, weights, bias, epoca)
+            for 
+            cost.append(xt)
+            test.append(xy)
+            
+            
+        # backpropagation step 2
+        dcost_dpred = error
+    
+        dpred_dz = sigmoid_der(z)
+    
+    
+        z_delta = dcost_dpred * dpred_dz
+    
+        inputs = x_train[indices[int(k * length):int((k + 1) * length)]].T
+        weights -= lr * np.dot(inputs, z_delta)
+    
+        for num in z_delta:
+            bias -= lr * num
 
-    dpred_dz = sigmoid_der(z)
-
-
-    z_delta = dcost_dpred * dpred_dz
-
-    inputs = x_train.T
-    weights -= lr * np.dot(inputs, z_delta)
-
-    for num in z_delta:
-        bias -= lr * num
 
 plt.plot(epoca, cost)
 plt.plot(epoca, test)
